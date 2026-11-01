@@ -10,18 +10,24 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sakshi.expensetracker.dto.LoginRequest;
+import com.sakshi.expensetracker.dto.LoginResponse;
+import org.springframework.security.authentication.BadCredentialsException;
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public AuthService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -57,4 +63,40 @@ public class AuthService {
                 "Registration successful"
         );
     }
+
+    public LoginResponse login(LoginRequest request) {
+
+        String email = request.getEmail()
+                .trim()
+                .toLowerCase();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new BadCredentialsException(
+                                "Invalid email or password"
+                        )
+                );
+
+        boolean passwordMatches = passwordEncoder.matches(
+                request.getPassword(),
+                user.getPasswordHash()
+        );
+
+        if (!passwordMatches) {
+            throw new BadCredentialsException(
+                    "Invalid email or password"
+            );
+        }
+
+        String token = jwtService.generateToken(user.getEmail());
+
+        return new LoginResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                token,
+                "Bearer"
+        );
+    }
+
 }
