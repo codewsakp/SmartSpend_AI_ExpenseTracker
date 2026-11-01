@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public interface ExpenseRepository
         extends JpaRepository<Expense, Long> {
@@ -20,6 +21,18 @@ public interface ExpenseRepository
         AND e.expenseDate < :endDate
         """)
     BigDecimal calculateMonthlyExpenses(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+    @Query("""
+    SELECT e.category, SUM(e.amount)
+    FROM Expense e
+    WHERE e.expenseDate >= :startDate
+    AND e.expenseDate < :endDate
+    GROUP BY e.category
+    ORDER BY SUM(e.amount) DESC
+    """)
+    List<Object[]> findCategoryWiseExpenses(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
