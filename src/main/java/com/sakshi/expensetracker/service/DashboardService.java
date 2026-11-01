@@ -7,7 +7,11 @@ import com.sakshi.expensetracker.repository.ExpenseRepository;
 import com.sakshi.expensetracker.dto.CategoryAnalyticsResponse;
 
 import org.springframework.stereotype.Service;
+import com.sakshi.expensetracker.entity.Expense;
+import com.sakshi.expensetracker.dto.ExpenseResponse;
 
+import org.springframework.data.domain.PageRequest;
+import java.util.stream.Collectors;
 
 import com.sakshi.expensetracker.dto.MonthlyTrendResponse;
 
@@ -132,5 +136,25 @@ public class DashboardService {
         }
 
         return response;
+    }
+    public List<ExpenseResponse> getRecentTransactions() {
+
+        // Retrieve the latest 5 expenses
+        List<Expense> expenses =
+                expenseRepository.findAllByOrderByExpenseDateDescIdDesc(
+                        PageRequest.of(0, 5)
+                );
+
+        // Convert Expense entities into response DTOs
+        return expenses.stream()
+                .map(expense -> new ExpenseResponse(
+                        expense.getId(),
+                        expense.getAmount(),
+                        expense.getCategory(),
+                        expense.getDescription(),
+                        expense.getExpenseDate(),
+                        expense.getPaymentMethod()
+                ))
+                .collect(Collectors.toList());
     }
 }
