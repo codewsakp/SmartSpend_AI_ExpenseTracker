@@ -12,10 +12,15 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import org.springframework.validation.annotation.Validated;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/budgets")
+@Validated
 public class BudgetController {
 
     private final BudgetService budgetService;
@@ -41,12 +46,16 @@ public class BudgetController {
     // 2. Get monthly budget summary
     @GetMapping("/summary")
     public ResponseEntity<BudgetSummaryResponse> getBudgetSummary(
-            @RequestParam int year,
-            @RequestParam int month) {
+            @RequestParam
+            @Min(2020) @Max(2100) int year,
+
+            @RequestParam
+            @Min(1) @Max(12) int month) {
 
         BudgetSummaryResponse response =
                 budgetService.getBudgetSummary(year, month);
 
         return ResponseEntity.ok(response);
     }
+    
 }

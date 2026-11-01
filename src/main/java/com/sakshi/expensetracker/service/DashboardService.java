@@ -1,70 +1,114 @@
+
 package com.sakshi.expensetracker.service;
 
-import com.sakshi.expensetracker.dto.BudgetSummaryResponse;
-import com.sakshi.expensetracker.dto.DashboardSummaryResponse;
-
-import com.sakshi.expensetracker.repository.ExpenseRepository;
 import com.sakshi.expensetracker.dto.CategoryAnalyticsResponse;
-
-import org.springframework.stereotype.Service;
-import com.sakshi.expensetracker.entity.Expense;
+import com.sakshi.expensetracker.dto.DashboardResponse;
+import com.sakshi.expensetracker.dto.DashboardSummaryResponse;
 import com.sakshi.expensetracker.dto.ExpenseResponse;
-
-import org.springframework.data.domain.PageRequest;
-import java.util.stream.Collectors;
-
 import com.sakshi.expensetracker.dto.MonthlyTrendResponse;
 
-import java.time.YearMonth;
-import java.time.format.TextStyle;
-import java.util.Locale;
+import com.sakshi.expensetracker.entity.Budget;
+import com.sakshi.expensetracker.entity.Expense;
+
+import com.sakshi.expensetracker.repository.BudgetRepository;
+import com.sakshi.expensetracker.repository.ExpenseRepository;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 public class DashboardService {
 
-    private final BudgetService budgetService;
+    private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
-    public DashboardService(BudgetService budgetService,ExpenseRepository expenseRepository) {
-        this.budgetService = budgetService;
+
+    public DashboardService(
+            BudgetRepository budgetRepository,
+            ExpenseRepository expenseRepository) {
+
+        this.budgetRepository = budgetRepository;
         this.expenseRepository = expenseRepository;
     }
 
+    // 1. Get monthly dashboard summary
     public DashboardSummaryResponse getDashboardSummary(
             int year, int month) {
 
-        // Reuse the existing BudgetService calculation
-        BudgetSummaryResponse budgetSummary =
-                budgetService.getBudgetSummary(year, month);
-
-        return new DashboardSummaryResponse(
-                budgetSummary.getTotalSpent(),
-                budgetSummary.getBudgetAmount(),
-                budgetSummary.getRemainingAmount(),
-                budgetSummary.getPercentageUsed(),
-                budgetSummary.getStatus()
-        );
-    }
-    public List<CategoryAnalyticsResponse> getCategoryBreakdown(
-            int year, int month) {
-
-        // Find the beginning and ending dates of the month
         YearMonth yearMonth = YearMonth.of(year, month);
 
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.plusMonths(1).atDay(1);
 
-        // Fetch category-wise totals from the database
+        // Calculate total expenses for the selected month
+        BigDecimal totalExpenses =
+                expenseRepository.calculateMonthlyExpenses(
+                        startDate, endDate);
+
+        // Check whether a budget exists for this month
+        Budget budget = budgetRepository
+                .findByYearAndMonth(year, month)
+                .orElse(null);
+
+        // If no budget exists, still return the expense summary
+        if (budget == null) {
+
+            return new DashboardSummaryResponse(
+                    totalExpenses,
+                    null,
+                    null,
+                    null,
+                    "BUDGET_NOT_SET"
+            );
+        }
+
+        // Calculate budget details
+        BigDecimal budgetAmount = budget.getAmount();
+
+        BigDecimal remainingBudget =
+                budgetAmount.subtract(totalExpenses);
+
+        BigDecimal percentageUsed = totalExpenses
+                .multiply(BigDecimal.valueOf(100))
+                .divide(budgetAmount, 2, RoundingMode.HALF_UP);
+
+        String budgetStatus =
+                remainingBudget.compareTo(BigDecimal.ZERO) < 0
+                        ? "OVER_BUDGET"
+                        : "WITHIN_BUDGET";
+
+        return new DashboardSummaryResponse(
+                totalExpenses,
+                budgetAmount,
+                remainingBudget,
+                percentageUsed,
+                budgetStatus
+        );
+    }
+
+    // 2. Get category-wise expense breakdown
+    public List<CategoryAnalyticsResponse> getCategoryBreakdown(
+            int year, int month) {
+
+        YearMonth yearMonth = YearMonth.of(year, month);
+
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.plusMonths(1).atDay(1);
+
         List<Object[]> results =
                 expenseRepository.findCategoryWiseExpenses(
                         startDate, endDate);
 
-        // Calculate total monthly spending
+        // Calculate total monthly expenses
         BigDecimal totalExpenses = results.stream()
                 .map(row -> (BigDecimal) row[1])
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -84,7 +128,11 @@ public class DashboardService {
 
                 percentage = amount
                         .multiply(BigDecimal.valueOf(100))
-                        .divide(totalExpenses, 2, RoundingMode.HALF_UP);
+                        .divide(
+                                totalExpenses,
+                                2,
+                                RoundingMode.HALF_UP
+                        );
             }
 
             response.add(
@@ -98,23 +146,26 @@ public class DashboardService {
 
         return response;
     }
+
+    // 3. Get spending trends for the last six months
     public List<MonthlyTrendResponse> getMonthlyTrends(
             int year, int month) {
 
-        // Validate and create the selected month
         YearMonth selectedMonth = YearMonth.of(year, month);
 
-        List<MonthlyTrendResponse> response = new ArrayList<>();
+        List<MonthlyTrendResponse> response =
+                new ArrayList<>();
 
-        // Calculate the last six months, including selected month
+        // Include the selected month and previous five months
         for (int i = 5; i >= 0; i--) {
 
-            YearMonth currentMonth = selectedMonth.minusMonths(i);
+            YearMonth currentMonth =
+                    selectedMonth.minusMonths(i);
 
             LocalDate startDate = currentMonth.atDay(1);
-            LocalDate endDate = currentMonth.plusMonths(1).atDay(1);
+            LocalDate endDate =
+                    currentMonth.plusMonths(1).atDay(1);
 
-            // Calculate expenses for this month
             BigDecimal totalAmount =
                     expenseRepository.calculateMonthlyExpenses(
                             startDate, endDate);
@@ -125,7 +176,6 @@ public class DashboardService {
                             Locale.ENGLISH
                     );
 
-            // Add the monthly result
             response.add(
                     new MonthlyTrendResponse(
                             monthName,
@@ -137,15 +187,15 @@ public class DashboardService {
 
         return response;
     }
+
+    // 4. Get the latest five transactions
     public List<ExpenseResponse> getRecentTransactions() {
 
-        // Retrieve the latest 5 expenses
         List<Expense> expenses =
                 expenseRepository.findAllByOrderByExpenseDateDescIdDesc(
                         PageRequest.of(0, 5)
                 );
 
-        // Convert Expense entities into response DTOs
         return expenses.stream()
                 .map(expense -> new ExpenseResponse(
                         expense.getId(),
@@ -156,5 +206,29 @@ public class DashboardService {
                         expense.getPaymentMethod()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    // 5. Combine all dashboard information
+    public DashboardResponse getDashboardData(
+            int year, int month) {
+
+        DashboardSummaryResponse summary =
+                getDashboardSummary(year, month);
+
+        List<CategoryAnalyticsResponse> categoryBreakdown =
+                getCategoryBreakdown(year, month);
+
+        List<MonthlyTrendResponse> monthlyTrends =
+                getMonthlyTrends(year, month);
+
+        List<ExpenseResponse> recentTransactions =
+                getRecentTransactions();
+
+        return new DashboardResponse(
+                summary,
+                categoryBreakdown,
+                monthlyTrends,
+                recentTransactions
+        );
     }
 }

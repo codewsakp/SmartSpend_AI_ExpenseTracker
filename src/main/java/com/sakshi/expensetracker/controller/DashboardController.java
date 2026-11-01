@@ -7,9 +7,15 @@ import java.util.List;
 import org.springframework.web.bind.annotation.*;
 import com.sakshi.expensetracker.dto.MonthlyTrendResponse;
 import com.sakshi.expensetracker.dto.ExpenseResponse;
+import com.sakshi.expensetracker.dto.DashboardResponse;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
 @RequestMapping("/api/dashboard")
+@Validated
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -20,22 +26,31 @@ public class DashboardController {
 
     @GetMapping("/summary")
     public DashboardSummaryResponse getDashboardSummary(
-            @RequestParam int year,
-            @RequestParam int month) {
+            @RequestParam
+            @Min(2020) @Max(2100) int year,
+
+            @RequestParam
+            @Min(1) @Max(12) int month) {
 
         return dashboardService.getDashboardSummary(year, month);
     }
     @GetMapping("/category-breakdown")
     public List<CategoryAnalyticsResponse> getCategoryBreakdown(
-            @RequestParam int year,
-            @RequestParam int month) {
+            @RequestParam
+            @Min(2020) @Max(2100) int year,
+
+            @RequestParam
+            @Min(1) @Max(12) int month) {
 
         return dashboardService.getCategoryBreakdown(year, month);
     }
     @GetMapping("/monthly-trends")
     public List<MonthlyTrendResponse> getMonthlyTrends(
-            @RequestParam int year,
-            @RequestParam int month) {
+            @RequestParam
+            @Min(2020) @Max(2100) int year,
+
+            @RequestParam
+            @Min(1) @Max(12) int month) {
 
         return dashboardService.getMonthlyTrends(year, month);
     }
@@ -43,5 +58,15 @@ public class DashboardController {
     public List<ExpenseResponse> getRecentTransactions() {
 
         return dashboardService.getRecentTransactions();
+    }
+    @GetMapping
+    public DashboardResponse getDashboard(
+            @RequestParam
+            @Min(2020) @Max(2100) int year,
+
+            @RequestParam
+            @Min(1) @Max(12) int month) {
+
+        return dashboardService.getDashboardData(year, month);
     }
 }
