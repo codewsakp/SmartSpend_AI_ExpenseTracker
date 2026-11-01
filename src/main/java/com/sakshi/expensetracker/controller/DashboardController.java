@@ -5,6 +5,7 @@ import com.sakshi.expensetracker.service.DashboardService;
 import com.sakshi.expensetracker.dto.CategoryAnalyticsResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
+import com.sakshi.expensetracker.dto.MonthlyTrendResponse;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -29,5 +30,12 @@ public class DashboardController {
             @RequestParam int month) {
 
         return dashboardService.getCategoryBreakdown(year, month);
+    }
+    @GetMapping("/monthly-trends")
+    public List<MonthlyTrendResponse> getMonthlyTrends(
+            @RequestParam int year,
+            @RequestParam int month) {
+
+        return dashboardService.getMonthlyTrends(year, month);
     }
 }

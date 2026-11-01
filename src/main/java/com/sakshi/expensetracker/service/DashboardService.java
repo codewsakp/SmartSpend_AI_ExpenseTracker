@@ -9,7 +9,11 @@ import com.sakshi.expensetracker.dto.CategoryAnalyticsResponse;
 import org.springframework.stereotype.Service;
 
 
+import com.sakshi.expensetracker.dto.MonthlyTrendResponse;
 
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.Locale;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -84,6 +88,45 @@ public class DashboardService {
                             category,
                             amount,
                             percentage
+                    )
+            );
+        }
+
+        return response;
+    }
+    public List<MonthlyTrendResponse> getMonthlyTrends(
+            int year, int month) {
+
+        // Validate and create the selected month
+        YearMonth selectedMonth = YearMonth.of(year, month);
+
+        List<MonthlyTrendResponse> response = new ArrayList<>();
+
+        // Calculate the last six months, including selected month
+        for (int i = 5; i >= 0; i--) {
+
+            YearMonth currentMonth = selectedMonth.minusMonths(i);
+
+            LocalDate startDate = currentMonth.atDay(1);
+            LocalDate endDate = currentMonth.plusMonths(1).atDay(1);
+
+            // Calculate expenses for this month
+            BigDecimal totalAmount =
+                    expenseRepository.calculateMonthlyExpenses(
+                            startDate, endDate);
+
+            String monthName = currentMonth.getMonth()
+                    .getDisplayName(
+                            TextStyle.FULL,
+                            Locale.ENGLISH
+                    );
+
+            // Add the monthly result
+            response.add(
+                    new MonthlyTrendResponse(
+                            monthName,
+                            currentMonth.getYear(),
+                            totalAmount
                     )
             );
         }
