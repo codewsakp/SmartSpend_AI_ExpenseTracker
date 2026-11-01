@@ -27,11 +27,13 @@ public class Expense {
     @Column(name = "payment_method")
     private String paymentMethod;
 
-    // Default constructor
+    // Each expense belongs to one user
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
+
     public Expense() {
     }
-
-    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -79,5 +81,13 @@ public class Expense {
 
     public void setPaymentMethod(String paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

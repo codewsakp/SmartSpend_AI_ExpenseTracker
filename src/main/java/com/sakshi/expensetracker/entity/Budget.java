@@ -9,8 +9,8 @@ import java.math.BigDecimal;
         name = "budgets",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_budget_year_month",
-                        columnNames = {"budget_year", "budget_month"}
+                        name = "uk_budget_user_year_month",
+                        columnNames = {"user_id", "budget_year", "budget_month"}
                 )
         }
 )
@@ -29,11 +29,13 @@ public class Budget {
     @Column(name = "budget_month", nullable = false)
     private int month;
 
-    // Default constructor
+    // Each budget belongs to one user
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    private User user;
+
     public Budget() {
     }
-
-    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -65,5 +67,13 @@ public class Budget {
 
     public void setMonth(int month) {
         this.month = month;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

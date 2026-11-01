@@ -6,9 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface BudgetRepository
-        extends JpaRepository<Budget, Long> {
+public interface BudgetRepository extends JpaRepository<Budget, Long> {
 
-    Optional<Budget> findByYearAndMonth(int year, int month);
-
+    Optional<Budget> findByUserIdAndYearAndMonth(
+            Long userId,
+            int year,
+            int month
+    );
 }

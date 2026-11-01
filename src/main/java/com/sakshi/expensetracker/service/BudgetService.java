@@ -4,14 +4,15 @@ package com.sakshi.expensetracker.service;
 import com.sakshi.expensetracker.dto.BudgetRequest;
 import com.sakshi.expensetracker.dto.BudgetResponse;
 import com.sakshi.expensetracker.dto.BudgetSummaryResponse;
-
 import com.sakshi.expensetracker.entity.Budget;
-
+import com.sakshi.expensetracker.entity.User;
 import com.sakshi.expensetracker.repository.BudgetRepository;
 import com.sakshi.expensetracker.repository.ExpenseRepository;
+import com.sakshi.expensetracker.repository.UserRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,33 +27,50 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
+    private final UserRepository userRepository;
 
-    // Constructor injection
     public BudgetService(
             BudgetRepository budgetRepository,
-            ExpenseRepository expenseRepository) {
+            ExpenseRepository expenseRepository,
+            UserRepository userRepository) {
 
         this.budgetRepository = budgetRepository;
         this.expenseRepository = expenseRepository;
+        this.userRepository = userRepository;
+    }
+
+    // Get the currently authenticated user
+    private User getCurrentUser() {
+
+        String email = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found")
+                );
     }
 
     // 1. Set or update a monthly budget
     public BudgetResponse setBudget(BudgetRequest request) {
 
-        // Find existing budget for the requested month
+        User user = getCurrentUser();
+
         Budget budget = budgetRepository
-                .findByYearAndMonth(
+                .findByUserIdAndYearAndMonth(
+                        user.getId(),
                         request.getYear(),
                         request.getMonth()
                 )
                 .orElseGet(Budget::new);
 
-        // Set budget details
         budget.setAmount(request.getAmount());
         budget.setYear(request.getYear());
         budget.setMonth(request.getMonth());
+        budget.setUser(user);
 
-        // Save new or updated budget
         Budget savedBudget = budgetRepository.save(budget);
 
         return convertToBudgetResponse(savedBudget);
@@ -64,37 +82,35 @@ public class BudgetService {
             int year,
             int month) {
 
-        // Find the budget
+        User user = getCurrentUser();
+
         Budget budget = budgetRepository
-                .findByYearAndMonth(year, month)
+                .findByUserIdAndYearAndMonth(
+                        user.getId(),
+                        year,
+                        month
+                )
                 .orElseThrow(() ->
                         new EntityNotFoundException(
-                                "Budget not found for "
-                                        + year + "-" + month
+                                "Budget not found for " + year + "-" + month
                         )
                 );
 
-        // Determine the date range
         YearMonth selectedMonth = YearMonth.of(year, month);
 
-        LocalDate startDate =
-                selectedMonth.atDay(1);
+        LocalDate startDate = selectedMonth.atDay(1);
+        LocalDate endDate = selectedMonth.plusMonths(1).atDay(1);
 
-        LocalDate endDate =
-                selectedMonth.plusMonths(1).atDay(1);
-
-        // Calculate total expenses for that month
         BigDecimal totalSpent =
                 expenseRepository.calculateMonthlyExpenses(
+                        user.getId(),
                         startDate,
                         endDate
                 );
 
-        // Calculate remaining budget
         BigDecimal remainingAmount =
                 budget.getAmount().subtract(totalSpent);
 
-        // Calculate percentage used
         BigDecimal percentageUsed =
                 totalSpent
                         .multiply(BigDecimal.valueOf(100))
@@ -104,7 +120,6 @@ public class BudgetService {
                                 RoundingMode.HALF_UP
                         );
 
-        // Determine budget status
         String status;
 
         if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
@@ -122,9 +137,8 @@ public class BudgetService {
         );
     }
 
-    // Convert Budget entity into response DTO
-    private BudgetResponse convertToBudgetResponse(
-            Budget budget) {
+    // Convert Budget entity into Response DTO
+    private BudgetResponse convertToBudgetResponse(Budget budget) {
 
         return new BudgetResponse(
                 budget.getId(),
