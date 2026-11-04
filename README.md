@@ -16,14 +16,14 @@ The application also integrates **Ollama through Spring AI** to support AI-power
 
 | Category | Technologies |
 |---|---|
-| Backend : Java 24, Spring Boot |
-| Database : MySQL, Spring Data JPA, Hibernate |
-| Security : Spring Security, JWT, BCrypt |
-| Frontend : React.js, JavaScript, Vite |
-| API Communication : REST APIs, Axios |
-| AI Integration : Spring AI, Ollama |
-| Tools : Maven, Postman, Git, GitHub |
-| Deployment : Railway |
+| Backend | Java 24, Spring Boot |
+| Database | MySQL, Spring Data JPA, Hibernate |
+| Security | Spring Security, JWT, BCrypt |
+| Frontend | React.js, JavaScript, Vite |
+| API Communication | REST APIs, Axios |
+| AI Integration | Spring AI, Ollama |
+| Tools | Maven, Postman, Git, GitHub |
+| Deployment | Railway |
 
 ## 🏗️ Application Architecture
 
@@ -45,13 +45,12 @@ The application also integrates **Ollama through Spring AI** to support AI-power
    Authentication
 ```
 
- **AI Integration Note:** Ollama is currently configured and working in the local development environment. 
- The deployed Railway backend cannot connect to the Ollama instance running on the local machine. 
- Therefore, AI features currently require local execution with Ollama running.
+> **AI Integration Note:** Ollama is currently configured and working in the local development environment. The deployed Railway backend cannot connect to the Ollama instance running on the local machine. Therefore, AI features currently require local execution with Ollama running.
 
 ## 🚀 Running the Project Locally
 
 ### Prerequisites
+
 - Java JDK 24
 - Node.js and npm
 - MySQL Server
